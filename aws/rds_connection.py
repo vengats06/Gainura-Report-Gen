@@ -376,6 +376,7 @@ class RDSConnection:
     
     
     def insert_fundamental(self, symbol: str, data: Dict):
+
         """
         Insert or update fundamental data for a stock.
         
@@ -393,9 +394,8 @@ class RDSConnection:
             }
             db.insert_fundamental('TCS', fundamentals)
         """
-        # Build dynamic query based on data keys
-        columns = ['symbol'] + list(data.keys())
-        values = [symbol] + list(data.values())
+        columns = ['symbol'] + [k for k in data if k != 'symbol']
+        values = [symbol] + [data[k] for k in data if k != 'symbol']
         
         query = sql.SQL("""
             INSERT INTO fundamentals ({})
@@ -409,6 +409,7 @@ class RDSConnection:
             sql.SQL(', ').join(
                 sql.SQL("{} = EXCLUDED.{}").format(sql.Identifier(col), sql.Identifier(col))
                 for col in data.keys()
+                
             )
         )
         

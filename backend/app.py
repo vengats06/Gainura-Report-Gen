@@ -20,6 +20,7 @@ Usage:
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from datetime import datetime, timedelta
+import pandas as pd
 import os
 import traceback
 
@@ -97,14 +98,15 @@ class StockReportPipeline:
             symbol = validated_symbol
             
             # STEP 1: Fetch all data
-            logger.info("\nSTEP 1: FETCHING LIVE DATA")
+            logger.info("\n STEP 1: FETCHING LIVE DATA")
             data = self._fetch_all_data(symbol, days)
             
-            if not data['price_data'] or len(data['price_data']) == 0:
+            # FIX: Proper DataFrame empty check
+            if data['price_data'] is None or (isinstance(data['price_data'], pd.DataFrame) and data['price_data'].empty):
                 return {'success': False, 'message': 'No price data available for this symbol'}
             
             # STEP 2: Process data (ETL)
-            logger.info("\nSTEP 2: PROCESSING DATA (ETL)")
+            logger.info("\n STEP 2: PROCESSING DATA (ETL)")
             processed_data = self._process_data(data['price_data'])
             
             # STEP 3: Store to AWS
@@ -116,11 +118,11 @@ class StockReportPipeline:
             ml_results = self._run_ml_models(processed_data, data.get('news', []))
             
             # STEP 5: Generate charts
-            logger.info("\nSTEP 5: GENERATING CHARTS")
+            logger.info("\n STEP 5: GENERATING CHARTS")
             charts = self._generate_charts(symbol, processed_data, ml_results.get('predictions'))
             
             # STEP 6: Build report data
-            logger.info("\n STEP 6: PREPARING REPORT DATA")
+            logger.info("\nSTEP 6: PREPARING REPORT DATA")
             report_data = self._build_report_data(symbol, data, processed_data, ml_results)
             
             # STEP 7: Generate PDF
@@ -161,54 +163,54 @@ class StockReportPipeline:
     
     def _fetch_all_data(self, symbol: str, days: int) -> dict:
         """Fetch data from all sources."""
-        logger.info(f"  → Fetching data for {symbol} ({days} days)")
+        logger.info(f"   Fetching data for {symbol} ({days} days)")
         
         data = {}
         
         # 1. Angel One - Price data
-        logger.info("  → Logging into Angel One...")
+        logger.info("  Logging into Angel One...")
         if not self.angel.login():
             raise Exception("Angel One login failed")
         
         to_date = datetime.now().strftime('%Y-%m-%d')
         from_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
         
-        logger.info(f"  → Fetching price data from {from_date} to {to_date}")
+        logger.info(f"  Fetching price data from {from_date} to {to_date}")
         df = self.angel.get_historical_data(symbol, from_date, to_date)
         
-        if df is None or len(df) == 0:
+        if df is None or (isinstance(df, pd.DataFrame) and df.empty):
             raise Exception(f"No price data available for {symbol}")
         
         data['price_data'] = df
-        logger.info(f"  ✓ Fetched {len(df)} days of price data")
+        logger.info(f"  Fetched {len(df)} days of price data")
         
         # 2. Screener.in - Fundamentals
-        logger.info("  → Scraping fundamentals from Screener.in...")
+        logger.info("  Scraping fundamentals from Screener.in...")
         fundamentals = self.scraper.get_fundamentals(symbol)
         data['fundamentals'] = fundamentals
         
         if fundamentals:
-            logger.info(f"  ✓ Fetched fundamentals for {fundamentals.get('company_name', symbol)}")
+            logger.info(f"   Fetched fundamentals for {fundamentals.get('company_name', symbol)}")
         else:
-            logger.warning("  Fundamentals not available")
+            logger.warning("   Fundamentals not available")
         
         # 3. News API - Latest news
-        logger.info("  → Fetching latest news...")
+        logger.info("   Fetching latest news...")
         news = []
         if self.news_fetcher.client:
             news = self.news_fetcher.get_stock_news(symbol, days=30)
             data['news'] = news
-            logger.info(f"  ✓ Fetched {len(news)} news articles")
+            logger.info(f"   Fetched {len(news)} news articles")
         else:
             data['news'] = []
-            logger.warning("   News API not configured")
+            logger.warning("  News API not configured")
         
         return data
     
     
     def _process_data(self, price_df):
         """Process data through ETL pipeline."""
-        logger.info("  → Cleaning data...")
+        logger.info("  Cleaning data...")
         
         # Prepare DataFrame
         df = price_df.copy()
@@ -217,13 +219,13 @@ class StockReportPipeline:
         
         # Clean data
         clean_df = self.transformer.clean_stock_data(df)
-        logger.info(f"  ✓ Data cleaned: {len(clean_df)} records")
+        logger.info(f"   Data cleaned: {len(clean_df)} records")
         
         # Calculate technical indicators
-        logger.info("  → Calculating technical indicators...")
+        logger.info("  Calculating technical indicators...")
         ti = TechnicalIndicators(clean_df)
         indicators_df = ti.calculate_all()
-        logger.info(f"  ✓ Calculated {len(indicators_df.columns)} columns")
+        logger.info(f"   Calculated {len(indicators_df.columns)} columns")
         
         # Add date features
         date_col = 'timestamp' if 'timestamp' in indicators_df.columns else 'date'
@@ -237,13 +239,13 @@ class StockReportPipeline:
         timestamp = datetime.now().strftime('%Y-%m-%d_%H%M%S')
         
         # 1. Store raw data to S3
-        logger.info("  → Uploading raw data to S3...")
+        logger.info("  Uploading raw data to S3...")
         
         # Price data
         price_json = raw_data['price_data'].to_dict(orient='records')
         s3_key = f"angel_one/{symbol}_{timestamp}.json"
         self.s3.upload_json(price_json, s3_key, bucket_type='raw')
-        logger.info(f"  ✓ Uploaded to s3://raw/{s3_key}")
+        logger.info(f"   Uploaded to s3://raw/{s3_key}")
         
         # Fundamentals
         if raw_data.get('fundamentals'):
@@ -256,14 +258,14 @@ class StockReportPipeline:
             self.s3.upload_json(raw_data['news'], news_key, bucket_type='raw')
         
         # 2. Store processed data to S3
-        logger.info("  → Uploading processed data to S3...")
+        logger.info("  Uploading processed data to S3...")
         processed_json = processed_data.to_dict(orient='records')
         proc_key = f"technical_indicators/{symbol}_{timestamp}.json"
         self.s3.upload_json(processed_json, proc_key, bucket_type='processed')
-        logger.info(f"  ✓ Uploaded to s3://processed/{proc_key}")
+        logger.info(f"  Uploaded to s3://processed/{proc_key}")
         
         # 3. Store to RDS PostgreSQL
-        logger.info("  → Storing to RDS PostgreSQL...")
+        logger.info("   Storing to RDS PostgreSQL...")
         
         # Ensure tables exist
         self.db.create_tables()
@@ -287,12 +289,12 @@ class StockReportPipeline:
             ))
         
         self.db.bulk_insert_stock_prices(price_records)
-        logger.info(f"  ✓ Inserted {len(price_records)} price records to RDS")
+        logger.info(f"  Inserted {len(price_records)} price records to RDS")
         
         # Insert fundamentals
         if raw_data.get('fundamentals'):
             self.db.insert_fundamental(symbol, raw_data['fundamentals'])
-            logger.info(f"  ✓ Inserted fundamentals to RDS")
+            logger.info(f"  Inserted fundamentals to RDS")
     
     
     def _run_ml_models(self, processed_data, news_articles):
@@ -300,7 +302,7 @@ class StockReportPipeline:
         results = {}
         
         # 1. Price Prediction
-        logger.info("  → Training price prediction model...")
+        logger.info(" Training price prediction model...")
         try:
             predictor = PricePredictor(model_type='linear')
             
@@ -311,7 +313,7 @@ class StockReportPipeline:
                 
                 results['predictions'] = predictions
                 results['model_metrics'] = metrics
-                logger.info(f"  ✓ Model trained (R² = {metrics['test_r2']:.3f})")
+                logger.info(f"   Model trained (R² = {metrics['test_r2']:.3f})")
             else:
                 logger.warning(f"   Not enough data for ML prediction ({len(processed_data)} days)")
                 results['predictions'] = None
@@ -322,37 +324,37 @@ class StockReportPipeline:
             results['model_metrics'] = None
         
         # 2. Sentiment Analysis
-        logger.info("  → Analyzing news sentiment...")
+        logger.info("   Analyzing news sentiment...")
         if news_articles and len(news_articles) > 0:
             analyzer = SentimentAnalyzer()
             headlines = [article['title'] for article in news_articles[:20]]
             sentiment_results = analyzer.get_overall_sentiment(headlines)
             results['sentiment'] = sentiment_results
-            logger.info(f"  ✓ Sentiment: {sentiment_results['overall_label']} ({sentiment_results['average_score']:.2f})")
+            logger.info(f"  Sentiment: {sentiment_results['overall_label']} ({sentiment_results['average_score']:.2f})")
         else:
             results['sentiment'] = None
             logger.warning("   No news for sentiment analysis")
         
         # 3. Risk Calculation
-        logger.info("  → Calculating risk metrics...")
+        logger.info("   Calculating risk metrics...")
         risk_calc = RiskCalculator()
         risk_metrics = risk_calc.calculate_all_risks(processed_data)
         results['risk'] = risk_metrics
-        logger.info(f"  ✓ Risk Score: {risk_metrics['risk_score']}/10 ({risk_metrics['risk_category']})")
+        logger.info(f"   Risk Score: {risk_metrics['risk_score']}/10 ({risk_metrics['risk_category']})")
         
         # 4. Trend Classification
-        logger.info("  → Classifying trend...")
+        logger.info("  Classifying trend...")
         classifier = TrendClassifier()
         trend = classifier.classify(processed_data)
         results['trend'] = trend
-        logger.info(f"  ✓ Trend: {trend['trend_label']} - {trend['recommendation']} ({trend['confidence']:.0%})")
+        logger.info(f"   Trend: {trend['trend_label']} - {trend['recommendation']} ({trend['confidence']:.0%})")
         
         return results
     
     
     def _generate_charts(self, symbol: str, processed_data, predictions_df):
         """Generate all charts."""
-        logger.info(f"  → Generating charts for {symbol}...")
+        logger.info(f"  Generating charts for {symbol}...")
         
         charts = self.chart_gen.create_all_charts(
             processed_data, 
@@ -360,14 +362,14 @@ class StockReportPipeline:
             predictions_df
         )
         
-        logger.info(f"  ✓ Generated {len(charts)} charts")
+        logger.info(f"  Generated {len(charts)} charts")
         return charts
     
     
     def _build_report_data(self, symbol: str, raw_data: dict, 
                           processed_data, ml_results: dict) -> dict:
         """Build complete report data structure."""
-        logger.info("  → Building report data...")
+        logger.info("  Building report data...")
         
         latest = processed_data.iloc[-1]
         first = processed_data.iloc[0]
@@ -614,9 +616,7 @@ def download_report(filename):
 # ============================================================================
 
 if __name__ == '__main__':
-   
     print("STOCKPULSE ANALYTICS - Starting Server")
- 
     
     Config.print_config_status()
     
