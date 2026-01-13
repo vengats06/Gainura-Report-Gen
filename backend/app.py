@@ -97,41 +97,41 @@ class StockReportPipeline:
             symbol = validated_symbol
             
             # STEP 1: Fetch all data
-            logger.info("\n📥 STEP 1: FETCHING LIVE DATA")
+            logger.info("\nSTEP 1: FETCHING LIVE DATA")
             data = self._fetch_all_data(symbol, days)
             
             if not data['price_data'] or len(data['price_data']) == 0:
                 return {'success': False, 'message': 'No price data available for this symbol'}
             
             # STEP 2: Process data (ETL)
-            logger.info("\n⚙️ STEP 2: PROCESSING DATA (ETL)")
+            logger.info("\nSTEP 2: PROCESSING DATA (ETL)")
             processed_data = self._process_data(data['price_data'])
             
             # STEP 3: Store to AWS
-            logger.info("\n☁️ STEP 3: STORING TO AWS")
+            logger.info("\n STEP 3: STORING TO AWS")
             self._store_to_aws(symbol, data, processed_data)
             
             # STEP 4: Run ML models
-            logger.info("\n🤖 STEP 4: RUNNING ML MODELS")
+            logger.info("\n STEP 4: RUNNING ML MODELS")
             ml_results = self._run_ml_models(processed_data, data.get('news', []))
             
             # STEP 5: Generate charts
-            logger.info("\n📊 STEP 5: GENERATING CHARTS")
+            logger.info("\nSTEP 5: GENERATING CHARTS")
             charts = self._generate_charts(symbol, processed_data, ml_results.get('predictions'))
             
             # STEP 6: Build report data
-            logger.info("\n📋 STEP 6: PREPARING REPORT DATA")
+            logger.info("\n STEP 6: PREPARING REPORT DATA")
             report_data = self._build_report_data(symbol, data, processed_data, ml_results)
             
             # STEP 7: Generate PDF
-            logger.info("\n📄 STEP 7: GENERATING PDF REPORT")
+            logger.info("\n STEP 7: GENERATING PDF REPORT")
             pdf_path = self.pdf_builder.create_report(symbol, report_data, charts)
             
             # Cleanup
             self.angel.logout()
             self.db.close_all_connections()
             
-            logger.info(f"\n✅ REPORT GENERATED SUCCESSFULLY!")
+            logger.info(f"\n REPORT GENERATED SUCCESSFULLY!")
             logger.info(f"PDF: {pdf_path}")
             logger.info(f"="*70)
             
@@ -143,7 +143,7 @@ class StockReportPipeline:
             }
             
         except Exception as e:
-            logger.error(f"\n❌ ERROR: {str(e)}")
+            logger.error(f"\n ERROR: {str(e)}")
             logger.error(traceback.format_exc())
             
             # Cleanup on error
@@ -190,7 +190,7 @@ class StockReportPipeline:
         if fundamentals:
             logger.info(f"  ✓ Fetched fundamentals for {fundamentals.get('company_name', symbol)}")
         else:
-            logger.warning("  ⚠️ Fundamentals not available")
+            logger.warning("  Fundamentals not available")
         
         # 3. News API - Latest news
         logger.info("  → Fetching latest news...")
@@ -201,7 +201,7 @@ class StockReportPipeline:
             logger.info(f"  ✓ Fetched {len(news)} news articles")
         else:
             data['news'] = []
-            logger.warning("  ⚠️ News API not configured")
+            logger.warning("   News API not configured")
         
         return data
     
@@ -313,11 +313,11 @@ class StockReportPipeline:
                 results['model_metrics'] = metrics
                 logger.info(f"  ✓ Model trained (R² = {metrics['test_r2']:.3f})")
             else:
-                logger.warning(f"  ⚠️ Not enough data for ML prediction ({len(processed_data)} days)")
+                logger.warning(f"   Not enough data for ML prediction ({len(processed_data)} days)")
                 results['predictions'] = None
                 results['model_metrics'] = None
         except Exception as e:
-            logger.error(f"  ❌ Prediction failed: {str(e)}")
+            logger.error(f"   Prediction failed: {str(e)}")
             results['predictions'] = None
             results['model_metrics'] = None
         
@@ -331,7 +331,7 @@ class StockReportPipeline:
             logger.info(f"  ✓ Sentiment: {sentiment_results['overall_label']} ({sentiment_results['average_score']:.2f})")
         else:
             results['sentiment'] = None
-            logger.warning("  ⚠️ No news for sentiment analysis")
+            logger.warning("   No news for sentiment analysis")
         
         # 3. Risk Calculation
         logger.info("  → Calculating risk metrics...")
@@ -614,14 +614,14 @@ def download_report(filename):
 # ============================================================================
 
 if __name__ == '__main__':
-    print("\n" + "🚀"*35)
+   
     print("STOCKPULSE ANALYTICS - Starting Server")
-    print("🚀"*35 + "\n")
+ 
     
     Config.print_config_status()
     
-    print("\n📡 Server starting on http://localhost:5000")
-    print("\n📋 Available endpoints:")
+    print("\n Server starting on http://localhost:5000")
+    print("\n Available endpoints:")
     print("  GET  /                      - API info")
     print("  GET  /api/health            - Health check")
     print("  POST /api/generate-report   - Generate report")

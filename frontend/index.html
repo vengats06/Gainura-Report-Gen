@@ -277,7 +277,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>📊 StockPulse Analytics</h1>
+            <h1>StockPulse Analytics</h1>
             <p>AI-Powered Stock Intelligence Reports</p>
         </div>
 
@@ -331,7 +331,7 @@
 
         <div class="footer">
             <p>Powered by Angel One API • AWS • Machine Learning</p>
-            <p>⚠️ Not Financial Advice - For Informational Purposes Only</p>
+            <p> Not Financial Advice - For Informational Purposes Only</p>
         </div>
     </div>
 
@@ -391,7 +391,7 @@
                 if (data.success) {
                     // Success
                     showResult('success', 
-                        '🎉', 
+                        '', 
                         'Report Generated Successfully!', 
                         `Your comprehensive analysis for ${symbol} is ready.`,
                         data.pdf_url
@@ -399,7 +399,7 @@
                 } else {
                     // Error
                     showResult('error', 
-                        '❌', 
+                        '', 
                         'Generation Failed', 
                         data.message
                     );
@@ -408,7 +408,7 @@
             } catch (error) {
                 loading.classList.remove('active');
                 showResult('error', 
-                    '❌', 
+                    '', 
                     'Connection Error', 
                     'Could not connect to server. Make sure the Flask app is running.'
                 );

@@ -25,9 +25,7 @@ logger = get_logger(__name__)
 
 def test_complete_pipeline():
     """Test complete pipeline with real stock data."""
-    print("\n" + "🚀"*35)
     print("COMPLETE PIPELINE TEST - REAL DATA")
-    print("🚀"*35 + "\n")
     
     try:
         # Get stock symbol from user
@@ -56,13 +54,13 @@ def test_complete_pipeline():
         # Check result
         if result['success']:
             print("\n" + "="*70)
-            print("✅ SUCCESS! Report generated successfully!")
+            print(" SUCCESS! Report generated successfully!")
             print("="*70)
             
-            print(f"\n📄 PDF Report: {result['pdf_path']}")
-            print(f"📊 File size: {os.path.getsize(result['pdf_path'])/1024:.1f} KB")
+            print(f"\n PDF Report: {result['pdf_path']}")
+            print(f" File size: {os.path.getsize(result['pdf_path'])/1024:.1f} KB")
             
-            print("\n📋 Report Contents:")
+            print("\n Report Contents:")
             print("  ✓ Cover page with key metrics")
             print("  ✓ Executive summary")
             print("  ✓ Company fundamentals")
@@ -73,7 +71,7 @@ def test_complete_pipeline():
             print("  ✓ News sentiment analysis")
             print("  ✓ Investment recommendation")
             
-            print("\n☁️ Data stored to:")
+            print("\n Data stored to:")
             print("  ✓ AWS S3 (raw and processed)")
             print("  ✓ AWS RDS PostgreSQL")
             
@@ -93,10 +91,10 @@ def test_complete_pipeline():
                 print("✓ PDF opened")
             
             print("\n" + "="*70)
-            print("🎉 COMPLETE PIPELINE TEST PASSED!")
+            print(" COMPLETE PIPELINE TEST PASSED!")
             print("="*70)
             
-            print("\n✅ Everything is working:")
+            print("\n Everything is working:")
             print("  • Data fetching from Angel One ✓")
             print("  • Web scraping (Screener.in) ✓")
             print("  • News API integration ✓")
@@ -110,9 +108,9 @@ def test_complete_pipeline():
             print("  • Trend classification ✓")
             print("  • Chart generation ✓")
             print("  • PDF report creation ✓")
-            
-            print("\n🚀 Your application is PRODUCTION READY!")
-            print("\n📋 Next steps:")
+        
+            print("\n Your application is PRODUCTION READY!")
+            print("\n Next steps:")
             print("  1. Start Flask server: python -m backend.app")
             print("  2. Open frontend: frontend/index.html")
             print("  3. Generate reports through web interface")
@@ -121,7 +119,7 @@ def test_complete_pipeline():
         
         else:
             print("\n" + "="*70)
-            print("❌ FAILED")
+            print(" FAILED")
             print("="*70)
             print(f"\nError: {result['message']}")
             
@@ -135,7 +133,7 @@ def test_complete_pipeline():
     
     except Exception as e:
         print("\n" + "="*70)
-        print("❌ ERROR")
+        print(" ERROR")
         print("="*70)
         print(f"\nException: {str(e)}")
         import traceback
